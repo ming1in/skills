@@ -1,0 +1,27 @@
+{
+  "name": "ming-skills",
+  "description": "Ming's reusable agent skills and workflows.",
+  "owner": {
+    "name": "Ming Lin"
+  },
+  "plugins": [
+    {
+      "name": "ming-skills",
+      "description": "Reusable agent skills for Claude Code, Codex, OpenCode, and related coding agents.",
+      "version": "0.1.0",
+      "source": "./",
+      "author": {
+        "name": "Ming Lin"
+      },
+      "homepage": "https://github.com/ming1in/skills",
+      "keywords": [
+        "agent-skills",
+        "claude-code",
+        "codex",
+        "opencode",
+        "automation"
+      ]
+    }
+  ]
+}
+

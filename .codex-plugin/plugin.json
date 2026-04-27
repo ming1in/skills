@@ -1,0 +1,38 @@
+{
+  "name": "ming-skills",
+  "version": "0.1.0",
+  "description": "Reusable agent skills and workflows by Ming Lin.",
+  "author": {
+    "name": "Ming Lin",
+    "url": "https://github.com/ming1in"
+  },
+  "homepage": "https://github.com/ming1in/skills",
+  "repository": "https://github.com/ming1in/skills",
+  "license": "MIT",
+  "keywords": [
+    "agent-skills",
+    "codex",
+    "claude-code",
+    "opencode",
+    "automation"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Ming's Skills",
+    "shortDescription": "Reusable agent workflows for coding, research, and automation",
+    "longDescription": "Ming's Skills packages reusable workflows for agentic coding, knowledge graph work, and autonomous session operation across Codex, Claude Code, OpenCode, and related agents.",
+    "developerName": "Ming Lin",
+    "category": "Productivity",
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "Help me publish or improve one of my agent skills.",
+      "Use my reusable skills workflow for this task."
+    ],
+    "brandColor": "#2563EB",
+    "screenshots": []
+  }
+}
+

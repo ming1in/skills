@@ -1,0 +1,22 @@
+{
+  "name": "ming-skills",
+  "description": "Reusable agent skills and workflows by Ming Lin.",
+  "version": "0.1.0",
+  "author": {
+    "name": "Ming Lin"
+  },
+  "homepage": "https://github.com/ming1in/skills",
+  "repository": "https://github.com/ming1in/skills",
+  "license": "MIT",
+  "keywords": [
+    "agent-skills",
+    "claude-code",
+    "codex",
+    "opencode",
+    "automation"
+  ],
+  "skills": [
+    "./skills/"
+  ]
+}
+
