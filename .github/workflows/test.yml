@@ -37,6 +37,20 @@ jobs:
           done
           echo "JSON validation passed"
 
+      - name: Plugin version uniformity across all manifests
+        run: |
+          v_market=$(python3 -c "import json; print(json.load(open('.claude-plugin/marketplace.json'))['plugins'][0]['version'])")
+          v_claude=$(python3 -c "import json; print(json.load(open('.claude-plugin/plugin.json'))['version'])")
+          v_codex=$(python3 -c "import json; print(json.load(open('.codex-plugin/plugin.json'))['version'])")
+          echo "  marketplace.json:           $v_market"
+          echo "  .claude-plugin/plugin.json: $v_claude"
+          echo "  .codex-plugin/plugin.json:  $v_codex"
+          if [ "$v_market" != "$v_claude" ] || [ "$v_claude" != "$v_codex" ]; then
+            echo "::error::plugin versions diverge across manifests"
+            exit 1
+          fi
+          echo "plugin version uniformity confirmed"
+
       # ── 3. install.sh --print idempotency ──────────────────────────────────
       - name: install.sh --print (no write, idempotency)
         run: |
