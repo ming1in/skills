@@ -20,7 +20,7 @@ clear trigger metadata and only the runtime resources needed by that skill.
 
 - Keep the skill folder itself lean: `SKILL.md` plus necessary `scripts/`,
   `references/`, or `assets/`.
-- Prefer shared repo-level scripts when multiple related skills use the same
-  state machine.
+- Put a skill's implementation under that skill directory by default. For AFK,
+  the canonical implementation lives in `skills/afk/scripts/`.
 - Do not copy private `big-one` KG context into public skills; link back to the
   private project docs from `big-one` instead.

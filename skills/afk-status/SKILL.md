@@ -4,4 +4,4 @@ description: Show current AFK mode state for this session, plus a summary of any
 allowed-tools: Bash
 ---
 
-!`bash "${CLAUDE_SKILL_DIR}/../../scripts/afk-status.sh" "${CLAUDE_SESSION_ID}"`
+!`bash "${CLAUDE_SKILL_DIR}/../afk/scripts/afk-status.sh" "${CLAUDE_SESSION_ID}"`

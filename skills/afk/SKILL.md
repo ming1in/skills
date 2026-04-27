@@ -9,7 +9,7 @@ Enable AFK (away-from-keyboard) mode for this session. The argument is optional 
 
 Optional task context: $ARGUMENTS
 
-!`bash "${CLAUDE_SKILL_DIR}/../../scripts/afk-enable.sh" "${CLAUDE_SESSION_ID}" "$ARGUMENTS"`
+!`bash "${CLAUDE_SKILL_DIR}/scripts/afk-enable.sh" "${CLAUDE_SESSION_ID}" "$ARGUMENTS"`
 
 You are now in **AFK mode**. The human is away from their keyboard. Continue the current session's in-flight work — plus the registered task if one was supplied — autonomously per these principles:
 

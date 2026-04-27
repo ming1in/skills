@@ -21,8 +21,8 @@ product monorepos without copy-paste drift.
 
 | Agent surface | Status | Entry point |
 | --- | --- | --- |
-| Claude Code | Local plugin scaffold | [`.claude-plugin/`](.claude-plugin/) |
-| Codex | Local plugin scaffold | [`.codex-plugin/`](.codex-plugin/) |
+| Claude Code | Plugin marketplace | [`.claude-plugin/`](.claude-plugin/) |
+| Codex | Skill install or plugin scaffold | [`.codex-plugin/`](.codex-plugin/) |
 | OpenCode | Install notes placeholder | [`.opencode/INSTALL.md`](.opencode/INSTALL.md) |
 
 The repository follows the Agent Skills convention: each skill is a directory
@@ -36,22 +36,105 @@ with a required `SKILL.md`, optional scripts, and optional references or assets.
 | [`afk-off`](skills/afk-off/) | Disables AFK mode for the current session. | Shares the AFK state stack. |
 | [`afk-status`](skills/afk-status/) | Shows current AFK state and other active AFK sessions. | Useful for cross-session dogfooding. |
 
-## Install And Use
+## Setup
 
-### Claude Code From `big-one`
+### Claude Code
 
-`big-one` consumes this repo as a git submodule at `submodules/skills`. Its
-project settings register the local plugin source and point AFK hooks at this
-repo's scripts:
+Claude Code installs skills through plugins and plugin marketplaces. Add this
+repo as a marketplace, then install the `ming-skills` plugin:
 
 ```text
-big-one/
-  .claude/settings.json
-  submodules/skills/
+/plugin marketplace add ming1in/skills
+/plugin install ming-skills@ming-skills
 ```
 
-When developing from `big-one`, commit skill implementation changes inside this
-repo first, then update the submodule pointer in `big-one`.
+For local development from a checkout, add the checkout as a local marketplace:
+
+```text
+/plugin marketplace add ./submodules/skills
+/plugin install ming-skills@ming-skills
+```
+
+Project teams can also register this marketplace in `.claude/settings.json`:
+
+```json
+{
+  "extraKnownMarketplaces": {
+    "ming-skills": {
+      "source": {
+        "source": "github",
+        "repo": "ming1in/skills"
+      }
+    }
+  },
+  "enabledPlugins": {
+    "ming-skills@ming-skills": true
+  }
+}
+```
+
+AFK needs two Claude Code lifecycle hooks to enforce and clean up AFK state.
+When using the plugin in a project, point hooks at the installed or checked-out
+scripts:
+
+```json
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/submodules/skills/skills/afk/scripts/afk-stop-hook.sh",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/submodules/skills/skills/afk/scripts/afk-session-end.sh",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+The `big-one` monorepo consumes this repo as a git submodule at
+`submodules/skills` and uses that hook shape while dogfooding AFK.
+
+### Codex
+
+Codex can install individual skills from a GitHub repo path into
+`$CODEX_HOME/skills`:
+
+```bash
+INSTALLER="$HOME/.codex/skills/.system/skill-installer/scripts/install-skill-from-github.py"
+python3 "$INSTALLER" \
+  --repo ming1in/skills \
+  --path skills/afk skills/afk-off skills/afk-status
+```
+
+Restart Codex after installing skills.
+
+For local development, install from the checked-out repo by copying or symlinking
+the skill directories into `$CODEX_HOME/skills`:
+
+```bash
+mkdir -p "${CODEX_HOME:-$HOME/.codex}/skills"
+ln -s "$PWD/skills/afk" "${CODEX_HOME:-$HOME/.codex}/skills/afk"
+ln -s "$PWD/skills/afk-off" "${CODEX_HOME:-$HOME/.codex}/skills/afk-off"
+ln -s "$PWD/skills/afk-status" "${CODEX_HOME:-$HOME/.codex}/skills/afk-status"
+```
+
+The `.codex-plugin/plugin.json` manifest is kept in this repo so the same source
+can also be exposed through Codex plugin workflows as that surface matures.
 
 ### Manual Skill Use
 
@@ -79,10 +162,10 @@ Claude-specific session and hook plumbing.
 │   └── plugin.json
 ├── .opencode/
 │   └── INSTALL.md
-├── scripts/
-│   └── afk-*.sh
 ├── skills/
 │   ├── afk/
+│   │   ├── SKILL.md
+│   │   └── scripts/
 │   ├── afk-off/
 │   ├── afk-status/
 │   └── README.md
