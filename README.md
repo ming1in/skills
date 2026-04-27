@@ -1,142 +1,40 @@
 # Ming's Agent Skills
 
-Reusable agent skills, workflows, and adapters developed by Ming Lin.
+[![CI](https://github.com/ming1in/skills/actions/workflows/test.yml/badge.svg)](https://github.com/ming1in/skills/actions/workflows/test.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-This repository is the public, portable home for skills that are dogfooded in
-`big-one` and then shared across agent surfaces. The goal is simple: write the
-skill once, keep the implementation public, and consume it from private or
-product monorepos without copy-paste drift.
+Reusable agent skills for **Claude Code**, **Codex**, and **OpenCode**. Install once, use across surfaces. Each skill is a self-contained directory with a `SKILL.md`, optional supporting scripts, and its own `README.md`.
 
-## Start Here
+## Skills
 
-- Browse available skills in [`skills/`](skills/).
-- Use [`skills/afk`](skills/afk/) when an agent should continue current session
-  work while the human is away.
-- Develop locally from `big-one/submodules/skills` when working inside the
-  private monorepo.
-- Keep private operating notes, KG entries, and dogfood logs in `big-one`; keep
-  reusable skill source and public docs here.
-
-## Supported Agents
-
-| Agent surface | Status | Entry point |
+| Skill | What it does | Audience |
 | --- | --- | --- |
-| Claude Code | Plugin marketplace | [`.claude-plugin/`](.claude-plugin/) |
-| Codex | Skill install or plugin scaffold | [`.codex-plugin/`](.codex-plugin/) |
-| OpenCode | Install notes placeholder | [`.opencode/INSTALL.md`](.opencode/INSTALL.md) |
+| [`afk`](skills/afk/) | Continue current session work autonomously while you're away from the keyboard. | Claude Code power users running long sessions |
+| [`afk-off`](skills/afk-off/) | Disable AFK mode for the current session. | Companion to `afk` |
+| [`afk-status`](skills/afk-status/) | Show current AFK state and other active sessions in the stack. | Cross-session debugging |
 
-The repository follows the Agent Skills convention: each skill is a directory
-with a required `SKILL.md`, optional scripts, and optional references or assets.
-
-## Included Skills
-
-| Skill | What it does | Notes |
-| --- | --- | --- |
-| [`afk`](skills/afk/) | Enables away-from-keyboard autonomous work for the current session. | First migrated skill from `big-one`. |
-| [`afk-off`](skills/afk-off/) | Disables AFK mode for the current session. | Shares the AFK state stack. |
-| [`afk-status`](skills/afk-status/) | Shows current AFK state and other active AFK sessions. | Useful for cross-session dogfooding. |
-
-## Setup
+## Install
 
 ### Claude Code
 
-Claude Code installs skills through plugins and plugin marketplaces. Add this
-repo as a marketplace, then install the `ming-skills` plugin:
+Add this repo as a plugin marketplace, then install the bundle:
 
 ```text
 /plugin marketplace add ming1in/skills
 /plugin install ming-skills@ming-skills
 ```
 
-For local development from a checkout, add the checkout as a local marketplace:
-
-```text
-/plugin marketplace add ./submodules/skills
-/plugin install ming-skills@ming-skills
-```
-
-Project teams can also register this marketplace in `.claude/settings.json`:
-
-```json
-{
-  "extraKnownMarketplaces": {
-    "ming-skills": {
-      "source": {
-        "source": "github",
-        "repo": "ming1in/skills"
-      }
-    }
-  },
-  "enabledPlugins": {
-    "ming-skills@ming-skills": true
-  }
-}
-```
-
-AFK needs three Claude Code lifecycle hooks to enforce and clean up AFK state: `Stop` (block session exit while active), `SessionEnd` (clean up the per-session state file on clean exit), and `SessionStart` (resume-reminder if the previous session crashed mid-AFK). The fastest path is the bundled installer:
+Some skills (like `afk`) need lifecycle hooks registered in your `.claude/settings.json`. Each skill's README documents the additional setup. AFK ships a bundled installer:
 
 ```bash
-bash skills/afk/install.sh                         # add to ~/.claude/settings.json
-bash skills/afk/install.sh --target /project/.claude/settings.json
-bash skills/afk/install.sh --print                 # preview, no write
-bash skills/afk/install.sh --remove                # uninstall (idempotent)
+bash skills/afk/install.sh                       # add to ~/.claude/settings.json
+bash skills/afk/install.sh --print               # preview, no write
+bash skills/afk/install.sh --remove              # uninstall, idempotent
 ```
 
-The installer is idempotent (entries are tagged so re-runs dedupe) and `--remove` cleans up only AFK entries, preserving any other hooks in the file.
-
-If you'd rather wire hooks by hand, point them at the installed or checked-out scripts (the `big-one` monorepo dogfoods this exact shape):
-
-```json
-{
-  "hooks": {
-    "Stop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "\"$CLAUDE_PROJECT_DIR\"/submodules/skills/skills/afk/scripts/afk-stop-hook.sh",
-            "timeout": 10
-          }
-        ]
-      }
-    ],
-    "SessionEnd": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "\"$CLAUDE_PROJECT_DIR\"/submodules/skills/skills/afk/scripts/afk-session-end.sh",
-            "timeout": 5
-          }
-        ]
-      }
-    ],
-    "SessionStart": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "\"$CLAUDE_PROJECT_DIR\"/submodules/skills/skills/afk/scripts/afk-session-start.sh",
-            "timeout": 5
-          }
-        ]
-      }
-    ]
-  }
-}
-```
-
-The `big-one` monorepo consumes this repo as a git submodule at
-`submodules/skills` and uses that hook shape while dogfooding AFK.
-
-**Why settings.json hooks (not skill-scoped frontmatter):** skill-scoped hooks declared in SKILL.md `hooks:` only fire when the skill is currently active in the conversation. AFK needs `Stop` to fire on every session Stop regardless of whether `/afk` was the most-recently-invoked skill, so settings.json registration is required. Verified against [code.claude.com/docs/en/hooks § Hooks in Skills and Agents](https://code.claude.com/docs/en/hooks#hooks-in-skills-and-agents).
+See [`skills/afk/README.md`](skills/afk/README.md) for full details.
 
 ### Codex
-
-Codex can install individual skills from a GitHub repo path into
-`$CODEX_HOME/skills`. This makes the skill source available to Codex for
-development and review; AFK's autonomous Stop-hook behavior is currently
-Claude-Code-specific until a Codex lifecycle adapter exists.
 
 ```bash
 INSTALLER="$HOME/.codex/skills/.system/skill-installer/scripts/install-skill-from-github.py"
@@ -145,89 +43,112 @@ python3 "$INSTALLER" \
   --path skills/afk skills/afk-off skills/afk-status
 ```
 
-Restart Codex after installing skills.
+Restart Codex after installing.
 
-For local development, install from the checked-out repo by copying or symlinking
-the skill directories into `$CODEX_HOME/skills`:
+> **Note:** AFK's autonomous Stop-hook behavior is currently Claude-Code-specific. Installing under Codex makes the skill source available for review and adaptation; a Codex lifecycle adapter is planned.
+
+### OpenCode
+
+Install path TBD — see [`.opencode/INSTALL.md`](.opencode/INSTALL.md).
+
+### Local development
+
+If you've cloned this repo (or use it as a git submodule like `big-one` does at `submodules/skills`), point Claude Code at the local checkout instead of GitHub:
+
+```text
+/plugin marketplace add ./submodules/skills
+/plugin install ming-skills@ming-skills
+```
+
+For Codex, symlink the skill directories into `$CODEX_HOME/skills/`:
 
 ```bash
 mkdir -p "${CODEX_HOME:-$HOME/.codex}/skills"
-ln -s "$PWD/skills/afk" "${CODEX_HOME:-$HOME/.codex}/skills/afk"
-ln -s "$PWD/skills/afk-off" "${CODEX_HOME:-$HOME/.codex}/skills/afk-off"
-ln -s "$PWD/skills/afk-status" "${CODEX_HOME:-$HOME/.codex}/skills/afk-status"
+for s in afk afk-off afk-status; do
+  ln -s "$PWD/skills/$s" "${CODEX_HOME:-$HOME/.codex}/skills/$s"
+done
 ```
 
-The `.codex-plugin/plugin.json` manifest is kept in this repo so the same source
-can also be exposed through Codex plugin workflows as that surface matures.
-
-### Manual Skill Use
-
-For tools that can load a directory of `SKILL.md` folders, point the tool at the
-skill directory you need:
+## Quick start (Claude Code + AFK)
 
 ```text
-skills/afk/
-skills/afk-off/
-skills/afk-status/
+# Plugin registered, hooks installed, /afk available
+
+# Start working with Claude on something long-running:
+"Help me refactor the user-auth module"
+…work, work…
+
+# Step away — AFK keeps the agent going on the in-flight work:
+/afk
+
+# (close laptop, get coffee)
+
+# Check what happened:
+/afk-status
+
+# Done?
+/afk-off
 ```
 
-AFK currently expects Claude Code session metadata and project hook wiring. Other
-agent adapters should preserve the same state-machine behavior while replacing
-Claude-specific session and hook plumbing.
+The agent keeps working through Stop events until it self-marks `task_status: "done"` (work complete) or `task_status: "blocked"` (hard approval gate hit), or you run `/afk-off`. A 50-iteration cap prevents runaway loops.
 
-## Repository Shape
+## Repository shape
 
 ```text
 .
-├── .claude-plugin/
-│   ├── marketplace.json
-│   └── plugin.json
-├── .codex-plugin/
-│   └── plugin.json
-├── .opencode/
-│   └── INSTALL.md
+├── .claude-plugin/         # Claude Code marketplace + plugin manifests
+├── .codex-plugin/          # Codex plugin manifest
+├── .opencode/              # OpenCode install notes (placeholder)
+├── .github/workflows/      # CI: shellcheck + JSON validation + AFK smoke test
 ├── skills/
-│   ├── afk/
-│   │   ├── SKILL.md
-│   │   └── scripts/
-│   ├── afk-off/
-│   ├── afk-status/
-│   └── README.md
+│   ├── afk/                # /afk slash command + supporting scripts + install.sh
+│   ├── afk-off/            # /afk-off slash command
+│   └── afk-status/         # /afk-status slash command
+├── CHANGELOG.md
+├── LICENSE                 # MIT
 └── README.md
 ```
 
-## Development Protocol
+Each skill directory has a `SKILL.md` (the slash-command body) and a `README.md` (human-facing docs). AFK additionally bundles `scripts/` and `install.sh`.
 
-1. Make reusable skill changes in this repo, even when editing from the
-   `big-one/submodules/skills` checkout.
-2. Keep skill folders minimal: `SKILL.md` plus only the scripts, references, or
-   assets that the skill needs at runtime.
-3. Put monorepo-specific context in `big-one/knowledge`, not in this public repo.
-4. Commit and push this repo before staging the updated submodule gitlink in
-   `big-one`.
-5. Run the moved scripts with a temporary `HOME` before publishing changes that
-   touch user-level state.
+## Why settings.json hooks (not skill-scoped frontmatter)
 
-## Prior Art
+Skills can declare hooks in their `SKILL.md` frontmatter via the `hooks` field, but those hooks fire **only when the skill is active in the current conversation**. AFK needs `Stop` to fire on *every* session Stop regardless of whether `/afk` was the most-recently-invoked skill, so AFK uses settings.json hook registration. Verified against [code.claude.com/docs/en/hooks § Hooks in Skills and Agents](https://code.claude.com/docs/en/hooks#hooks-in-skills-and-agents).
 
-This repo is intentionally borrowing proven README patterns from public skills
-catalogs:
+## For contributors
 
-- [`openai/skills`](https://github.com/openai/skills) for a concise catalog and
-  installer-focused README.
-- [`anthropics/skills`](https://github.com/anthropics/skills) for the
-  self-contained `SKILL.md` per directory model.
-- [`vercel-labs/agent-skills`](https://github.com/vercel-labs/agent-skills) for
-  agent-facing repository guidance and skill authoring conventions.
-- [`mxyhi/ok-skills`](https://github.com/mxyhi/ok-skills) for a browseable
-  cross-agent skill index.
+This repo is the public, portable home for skills that are dogfooded in a private monorepo (`big-one`) before being shared. Development protocol:
 
-## Planned Skills
+1. Make reusable skill changes in this repo (or via `big-one/submodules/skills` checkout).
+2. Keep skill folders minimal — `SKILL.md` plus only what the skill needs at runtime.
+3. Monorepo-specific context goes in `big-one/knowledge/`, not here.
+4. Commit and push this repo before bumping the submodule gitlink in `big-one`.
+5. Use a temporary `$HOME` when smoke-testing scripts that touch user-level state.
 
-- `people-search` - Privacy-preserving people lookup and friend-entry draft
-  workflow.
-- `kg-merge-resolution` - Knowledge graph merge conflict resolution workflow.
+CI ([`.github/workflows/test.yml`](.github/workflows/test.yml)) runs on every push and pull request to `main`:
+
+- `shellcheck` on every `*.sh` under `skills/`
+- JSON parse validation of plugin manifests + version uniformity across `marketplace.json`, `.claude-plugin/plugin.json`, and `.codex-plugin/plugin.json`
+- 7-step end-to-end AFK pipeline smoke test (no-state silence → enable → stop hook block → disable → release → re-enable → status → SessionEnd cleanup)
+
+## Why these skills
+
+`afk` was the seed — Ming wanted to step away during long sessions without losing autonomous progress, and the existing patterns (ralph-loop, `--dangerously-skip-permissions`) didn't fit. The skill became a reference design for "smarter loops that write themselves" — the agent owns its own continue/done/blocked signal via a state file rather than re-injecting a fixed prompt. Companion skills emerged as the natural UX surface (`afk-off`, `afk-status`).
+
+## Planned skills
+
+- `people-search` — privacy-preserving people lookup and friend-entry draft workflow.
+- `kg-merge-resolution` — knowledge graph merge conflict resolution workflow.
+
+## Prior art
+
+Borrowing README patterns from these public skills repos:
+
+- [`anthropics/skills`](https://github.com/anthropics/skills) — self-contained `SKILL.md` per directory model.
+- [`openai/skills`](https://github.com/openai/skills) — concise catalog and installer-focused README.
+- [`vercel-labs/agent-skills`](https://github.com/vercel-labs/agent-skills) — repository guidance and skill authoring conventions.
+- [`mxyhi/ok-skills`](https://github.com/mxyhi/ok-skills) — browseable cross-agent skill index.
 
 ## License
 
-MIT
+MIT — see [`LICENSE`](LICENSE).

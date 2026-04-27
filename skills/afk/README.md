@@ -45,11 +45,29 @@ Bare `/afk` (no argument) tells the agent to continue the current session's in-f
 
 ## Install
 
-### 1. Register the hook scripts
+### Claude Code
 
-AFK requires three lifecycle hooks registered in your `.claude/settings.json`: `Stop` (blocks session exit while active), `SessionEnd` (cleans up state file on clean exit), and `SessionStart` (resume-reminder if a previous session crashed mid-AFK). The fastest path is the bundled installer.
+#### 1. Install the skill
 
-#### Option A — bundled `install.sh` (recommended)
+Add this repo as a plugin marketplace, then install the `ming-skills` bundle (which includes `afk`, `afk-off`, and `afk-status`):
+
+```text
+/plugin marketplace add ming1in/skills
+/plugin install ming-skills@ming-skills
+```
+
+For local development from a checkout (e.g. as a submodule), point Claude Code at the local directory instead:
+
+```text
+/plugin marketplace add ./submodules/skills
+/plugin install ming-skills@ming-skills
+```
+
+#### 2. Register the lifecycle hooks
+
+AFK requires three lifecycle hooks in your `.claude/settings.json`: `Stop` (blocks session exit while active), `SessionEnd` (cleans up state file on clean exit), and `SessionStart` (resume-reminder if a previous session crashed mid-AFK). The fastest path is the bundled installer.
+
+##### Option A — bundled `install.sh` (recommended)
 
 From the skill directory:
 
@@ -62,7 +80,7 @@ bash install.sh --remove                # uninstall (idempotent)
 
 The installer auto-detects its own location (`$BASH_SOURCE/scripts/...`) and writes absolute paths to the three hook scripts. Re-running is idempotent — entries are tagged `# afk-skill <path>` so the script can find and dedupe them. `--remove` cleanly removes only the AFK entries; unrelated hooks in the same settings file are preserved.
 
-#### Option B — manual settings.json edit
+##### Option B — manual settings.json edit
 
 If you'd rather wire it up by hand:
 
@@ -114,39 +132,35 @@ Optional: pass `AFK_TIMING_LOG` to write per-hook timing to a log file:
 "command": "AFK_TIMING_LOG=\"$CLAUDE_PROJECT_DIR/tmp/hook-timing.log\" \"$CLAUDE_PROJECT_DIR\"/path/to/skills/afk/scripts/afk-stop-hook.sh"
 ```
 
-#### Why settings.json registration is required
+##### Why settings.json registration is required
 
-Skill-scoped hooks declared via SKILL.md frontmatter `hooks` field only fire when the skill is active in the conversation. AFK needs `Stop` to fire on **every** session Stop regardless of whether `/afk` was the most-recently-invoked skill, so settings.json registration is necessary. Verified against [code.claude.com/docs/en/hooks § Hooks in Skills and Agents](https://code.claude.com/docs/en/hooks#hooks-in-skills-and-agents).
+Skill-scoped hooks declared via `SKILL.md` frontmatter `hooks` field only fire when the skill is active in the current conversation. AFK needs `Stop` to fire on **every** session Stop regardless of whether `/afk` was the most-recently-invoked skill, so settings.json registration is necessary. Verified against [code.claude.com/docs/en/hooks § Hooks in Skills and Agents](https://code.claude.com/docs/en/hooks#hooks-in-skills-and-agents).
 
-### 2. Install the skill (Claude Code plugin)
+### Codex
 
-If this repo is registered as a Claude Code plugin marketplace, install via:
-
-```text
-/plugin install ming-skills@ming-skills
+```bash
+INSTALLER="$HOME/.codex/skills/.system/skill-installer/scripts/install-skill-from-github.py"
+python3 "$INSTALLER" \
+  --repo ming1in/skills \
+  --path skills/afk skills/afk-off skills/afk-status
 ```
 
-For local development from a git checkout (e.g. as a submodule):
+Restart Codex after installing.
 
-```json
-{
-  "extraKnownMarketplaces": {
-    "ming-skills-local": {
-      "source": {
-        "source": "directory",
-        "path": "${CLAUDE_PROJECT_DIR}/path/to/skills-repo"
-      }
-    }
-  },
-  "enabledPlugins": {
-    "ming-skills@ming-skills-local": true
-  }
-}
+> **Note:** AFK's autonomous Stop-hook behavior is currently Claude-Code-specific. Installing under Codex makes the skill source available for review and adaptation; a Codex lifecycle adapter is planned. Companion skills (`afk-off`, `afk-status`) install the same way and are listed in the command above.
+
+For local development, install from a checked-out repo by symlinking the skill directories into `$CODEX_HOME/skills`:
+
+```bash
+mkdir -p "${CODEX_HOME:-$HOME/.codex}/skills"
+for s in afk afk-off afk-status; do
+  ln -s "$PWD/skills/$s" "${CODEX_HOME:-$HOME/.codex}/skills/$s"
+done
 ```
 
-### 3. Companion skills
+### Companion skills
 
-Install `afk-off` and `afk-status` from the same repo — they share the AFK state stack and make the workflow complete:
+`/afk-off` and `/afk-status` ship in the same `ming-skills` plugin and share the AFK state stack:
 
 | Skill | Command | What it does |
 |-------|---------|--------------|
