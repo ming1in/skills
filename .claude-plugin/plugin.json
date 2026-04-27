@@ -1,7 +1,7 @@
 {
   "name": "ming-skills",
   "description": "Reusable agent skills and workflows by Ming Lin.",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "author": {
     "name": "Ming Lin"
   },
@@ -17,6 +17,19 @@
   ],
   "skills": [
     "./skills/"
-  ]
+  ],
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/skills/afk/scripts/afk-bundled-hook-test.sh\"",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
 }
 

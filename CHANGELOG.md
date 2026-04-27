@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.3.2 — 2026-04-27 (test release)
+
+### Added (test infrastructure — temporary)
+
+- **Plugin-bundled Stop hook** declared in `.claude-plugin/plugin.json`'s `hooks` field, pointing at `skills/afk/scripts/afk-bundled-hook-test.sh`. The hook just appends a timestamped line to `/tmp/afk-bundled-hook-test.log` and exits 0 — no functional behavior change to AFK.
+- **`scripts/afk-bundled-hook-test.sh`** — empirical test of whether Claude Code's plugin-bundled hooks fire always-on once the plugin is enabled, or only when the skill is actively invoked. The Claude Code research at `operations-pod/claude-code/engineering.md` flagged this as an open question; this release answers it empirically.
+
+### Test protocol
+
+After installing v0.3.2:
+1. Open a fresh Claude Code session in any project
+2. Do NOT invoke `/afk` in that session
+3. Send any message and let the agent finish (triggers Stop)
+4. Check `/tmp/afk-bundled-hook-test.log`
+
+- **Log has an entry** → bundled hooks fire always-on after install → AFK can drop `install.sh` in v0.4.0 (single-step install becomes the entire setup).
+- **Log is empty** → bundled hooks are skill-scoped in disguise → `install.sh` stays mandatory until Claude Code adds always-on plugin hook support.
+
+The test hook will be removed in v0.3.3 (pass) or v0.4.0 (fail) once results are recorded.
+
 ## 0.3.1 — 2026-04-27
 
 ### Fixed
