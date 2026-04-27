@@ -202,6 +202,86 @@ echo '{"session_id": "test-session-001"}' | ./scripts/afk-stop-hook.sh
 
 Second run (AFK active): prints JSON `{"decision": "block", "reason": "..."}` — correct.
 
+## Troubleshooting
+
+### `/afk` runs but the session ends anyway
+
+Check `~/.claude/afk-stack/<your-session-id>.json` exists and shows `"enabled": true, "task_status": "active"`. If the file is missing or `enabled` is `false`, AFK didn't actually engage. Likely causes:
+
+- The skill body's path resolution failed (older `${CLAUDE_SKILL_DIR}` regression). Re-run `/afk-status` — if it errors with a path not found, your install is stale; reinstall via `bash install.sh` or `/plugin install ming-skills@ming-skills`.
+- Hooks not registered. Run `bash install.sh --print` and verify the output JSON has `Stop`, `SessionEnd`, and `SessionStart` entries. If they're missing, run `bash install.sh` (without `--print`) to write them.
+- A different session beat you to a Stop event. The state file is keyed by canonical session ID — the hook only fires on Stop events from your session. Run `/afk-status` to confirm your session's entry exists.
+
+### Install ran but hooks aren't firing
+
+Verify the hook scripts are executable and the paths in `settings.json` resolve:
+
+```bash
+# From the project where you ran install.sh:
+python3 -c "
+import json, os
+with open(os.path.expanduser('~/.claude/settings.json')) as f:
+    s = json.load(f)
+for event in ('Stop', 'SessionEnd', 'SessionStart'):
+    for group in s.get('hooks', {}).get(event, []):
+        for h in group.get('hooks', []):
+            cmd = h.get('command', '')
+            if 'afk-skill' not in cmd:
+                continue
+            path = cmd.split()[-1]  # last token is the script path
+            print(f'{event}: {path} {\"✅\" if os.access(path, os.X_OK) else \"❌ NOT EXECUTABLE\"}')
+"
+```
+
+If a path shows ❌, run `chmod +x` on it. If a path doesn't exist, the skill was installed under a different prefix than `install.sh` recorded — re-run the installer from the actual current location.
+
+### How to see what the hooks are doing
+
+Hook activity logs to `tmp/hook-timing.log` in your project root (when `AFK_TIMING_LOG` is set in the hook command, which `install.sh` does NOT set by default — only the `big-one`-style manual settings.json passes that env var). To enable timing logs, edit your `settings.json` hook entries to prepend:
+
+```text
+AFK_TIMING_LOG="$CLAUDE_PROJECT_DIR/tmp/hook-timing.log"
+```
+
+Then `tail -f tmp/hook-timing.log` shows one line per fire: `<ISO-ts>\t<script-name>\tduration_ms=<ms>\texit=<code>`. If you don't see entries when AFK should be active, the hook isn't being invoked — check `settings.json` registration first.
+
+### Stuck `task_status: active` after agent should be done
+
+The agent is supposed to write `task_status: "done"` to the state file when work completes. If it forgot:
+
+```bash
+# Replace SESSION_ID with yours from /afk-status output
+python3 -c "
+import json, os
+p = os.path.expanduser(f'~/.claude/afk-stack/SESSION_ID.json')
+s = json.load(open(p))
+s['task_status'] = 'done'
+json.dump(s, open(p, 'w'), indent=2)
+"
+```
+
+Or simpler: run `/afk-off` (flips `enabled` to `false`; same release effect).
+
+### Iteration cap kept hitting before work completed
+
+The default cap is 50 Stop events per AFK invocation. If your work routinely exceeds that, either:
+
+- Bump the cap by editing the state file directly: `python3 -c "import json,os; p=os.path.expanduser('~/.claude/afk-stack/<id>.json'); s=json.load(open(p)); s['max_iterations']=200; json.dump(s,open(p,'w'),indent=2)"`
+- Break the work into smaller, more focused tasks per `/afk` invocation
+- File a feature request for a `/afk --cap N "<task>"` flag
+
+### Cross-session bleed (Session B's Stop blocks even though /afk was in Session A)
+
+This was a real bug pre-v0.2.0 (the state file was user-scope single-file). If you see this on v0.2.0+: run `/afk-status` and inspect "Other sessions in AFK stack" — confirm the entry is keyed by the *correct* session ID. If multiple entries exist for the same session ID (shouldn't happen), report it as a bug with the contents of `ls ~/.claude/afk-stack/`.
+
+### Removing AFK from a project / user setup
+
+```bash
+bash install.sh --remove   # cleanly removes the three hook entries from settings.json
+```
+
+To also clear any lingering state files: `rm -rf ~/.claude/afk-stack/`. State files are ephemeral runtime state — safe to delete when no AFK session is active.
+
 ## Known limitations
 
 - **Hook wiring is not self-contained.** The `Stop` and `SessionEnd` hooks must be registered manually in `.claude/settings.json`. Skill-scoped hook support (where hooks come with the skill directory automatically) is a planned Claude Code feature — when it ships, AFK will be updated to use it.
