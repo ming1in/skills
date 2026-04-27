@@ -1,0 +1,74 @@
+name: Bug Report
+description: Something is broken or behaving unexpectedly in one of the skills
+title: "[bug] "
+labels: ["bug"]
+body:
+  - type: dropdown
+    id: skill
+    attributes:
+      label: Skill
+      description: Which skill is affected? (As of v0.3.0 there's one skill, `afk`, with subcommands `on`/`off`/`status`. If reporting a verb-specific issue, mention the verb in the description.)
+      options:
+        - afk
+        - other / repo infra
+    validations:
+      required: true
+
+  - type: dropdown
+    id: agent
+    attributes:
+      label: Agent surface
+      description: Where are you running the skill?
+      options:
+        - Claude Code
+        - Codex
+        - OpenCode
+        - other
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Skills version
+      description: From `cat .claude-plugin/plugin.json | grep version` or the plugin marketplace listing
+      placeholder: "0.3.0"
+    validations:
+      required: true
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What did you observe? Include exact commands, error messages, and (for AFK) the contents of `~/.claude/afk-stack/<session-id>.json` if relevant.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: Repro steps
+      description: Numbered, minimal steps to reproduce. If hook timing logs are available (`tmp/hook-timing.log`), paste relevant lines.
+      placeholder: |
+        1. Run `/afk "test task"` (or `/afk on/off/status`)
+        2. Close the laptop
+        3. Reopen — observed X, expected Y
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: OS, shell, Claude Code/Codex version, anything else relevant
+      placeholder: |
+        - macOS 15.3
+        - zsh 5.9
+        - Claude Code v1.x

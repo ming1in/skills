@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.3.1 — 2026-04-27
+
+### Fixed
+
+- **`install.sh` was writing broken hook entries.** The `# afk-skill <path>` identity tag was placed BEFORE the script path in the `command` field, making the entire line a shell comment that the shell silently no-opped. Hooks appeared installed but never fired. Fixed by moving the tag to a trailing comment: `bash "<path>" # afk-skill`. Idempotent install/remove logic unchanged (it matches on `# afk-skill` appearing anywhere in the command string). **Anyone who installed 0.3.0 should re-run `install.sh --remove` then `install.sh` to refresh broken entries.**
+
+### Added
+
+- **GitHub issue + PR templates** in `.github/`. Three issue forms (bug report, skill/feature request, contact-links config) and a PR template that nudges contributors toward focused PRs, CI awareness, and the version-uniformity gotcha. Updated for the post-consolidation single-skill reality.
+
 ## 0.3.0 — 2026-04-27
 
 ### Changed (BREAKING)

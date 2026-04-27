@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Claude Code documentation
+    url: https://code.claude.com/docs
+    about: General Claude Code usage questions belong upstream, not here.
+  - name: Codex documentation
+    url: https://platform.openai.com/docs/codex
+    about: Codex platform questions belong upstream.

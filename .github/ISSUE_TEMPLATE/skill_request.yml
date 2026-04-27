@@ -1,0 +1,47 @@
+name: Skill Request / Feature Request
+description: Propose a new skill or an improvement to an existing one
+title: "[request] "
+labels: ["enhancement"]
+body:
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Request type
+      options:
+        - New skill
+        - Improvement to existing skill
+        - Cross-agent adapter (e.g., Codex/OpenCode lifecycle parity)
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+      description: One paragraph — what workflow is awkward today, and how would this change it?
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed shape
+      description: Slash command name, brief command description, scripts/hooks needed. Doesn't need to be final — rough is fine.
+
+  - type: textarea
+    id: workaround
+    attributes:
+      label: Current workaround
+      description: How do you handle this today without the skill?
+
+  - type: dropdown
+    id: contribution
+    attributes:
+      label: Are you willing to contribute the implementation?
+      options:
+        - Yes — I'll open a PR
+        - Maybe — I can pair on it
+        - No — request only
+    validations:
+      required: true

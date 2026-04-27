@@ -79,10 +79,17 @@ def add_entry(event, script_path, timeout):
     event_hooks = hooks.setdefault(event, [])
     if has_afk_entry(event_hooks, script_path):
         return False
+    # The TAG goes AFTER the script path as a trailing shell comment, not
+    # before. Putting it first turns the entire `command` into a comment
+    # line, which the shell silently no-ops — the bug that shipped in
+    # 0.3.0 install.sh and was caught when /afk hooks fired with no
+    # observable effect. The has_afk_entry / remove_entries logic only
+    # cares whether TAG appears anywhere in the command string, so trailing
+    # placement preserves idempotent install/remove.
     event_hooks.append({
         "hooks": [{
             "type": "command",
-            "command": f"{TAG} {script_path}",
+            "command": f'bash "{script_path}" {TAG}',
             "timeout": timeout,
         }]
     })
