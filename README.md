@@ -43,9 +43,15 @@ python3 "$INSTALLER" \
   --path skills/afk skills/afk-off skills/afk-status
 ```
 
-Restart Codex after installing.
+To install just one skill, pass a single `--path`:
 
-> **Note:** AFK's autonomous Stop-hook behavior is currently Claude-Code-specific. Installing under Codex makes the skill source available for review and adaptation; a Codex lifecycle adapter is planned.
+```bash
+python3 "$INSTALLER" --repo ming1in/skills --path skills/afk
+```
+
+Restart Codex after installing. The installer drops files into `$CODEX_HOME/skills/` (default `~/.codex/skills/`). It aborts if a destination already exists — to update, delete the destination directory and re-run.
+
+> **Note:** AFK's autonomous Stop-hook behavior currently uses Claude-Code-specific env substitutions (`${CLAUDE_SKILL_DIR}`, `${CLAUDE_SESSION_ID}`). Codex has compatible `SessionStart` and `Stop` hooks (the `Stop` hook supports the same `decision: "block"` continuation pattern), so the AFK-on-Codex adapter is a small port — not blocked on missing platform features. Until that adapter ships, installing under Codex makes the skill source available for review.
 
 ### OpenCode
 
