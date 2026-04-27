@@ -112,7 +112,9 @@ The `big-one` monorepo consumes this repo as a git submodule at
 ### Codex
 
 Codex can install individual skills from a GitHub repo path into
-`$CODEX_HOME/skills`:
+`$CODEX_HOME/skills`. This makes the skill source available to Codex for
+development and review; AFK's autonomous Stop-hook behavior is currently
+Claude-Code-specific until a Codex lifecycle adapter exists.
 
 ```bash
 INSTALLER="$HOME/.codex/skills/.system/skill-installer/scripts/install-skill-from-github.py"
