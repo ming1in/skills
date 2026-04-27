@@ -47,7 +47,24 @@ Bare `/afk` (no argument) tells the agent to continue the current session's in-f
 
 ### 1. Register the hook scripts
 
-AFK requires two lifecycle hooks registered in your project's `.claude/settings.json`. Point them at the installed skill scripts:
+AFK requires three lifecycle hooks registered in your `.claude/settings.json`: `Stop` (blocks session exit while active), `SessionEnd` (cleans up state file on clean exit), and `SessionStart` (resume-reminder if a previous session crashed mid-AFK). The fastest path is the bundled installer.
+
+#### Option A — bundled `install.sh` (recommended)
+
+From the skill directory:
+
+```bash
+bash install.sh                         # add to ~/.claude/settings.json (user-scope)
+bash install.sh --target /project/.claude/settings.json   # project-scope
+bash install.sh --print                 # preview the resulting JSON, no write
+bash install.sh --remove                # uninstall (idempotent)
+```
+
+The installer auto-detects its own location (`$BASH_SOURCE/scripts/...`) and writes absolute paths to the three hook scripts. Re-running is idempotent — entries are tagged `# afk-skill <path>` so the script can find and dedupe them. `--remove` cleanly removes only the AFK entries; unrelated hooks in the same settings file are preserved.
+
+#### Option B — manual settings.json edit
+
+If you'd rather wire it up by hand:
 
 ```json
 {
@@ -73,6 +90,17 @@ AFK requires two lifecycle hooks registered in your project's `.claude/settings.
           }
         ]
       }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/path/to/skills/afk/scripts/afk-session-start.sh",
+            "timeout": 5
+          }
+        ]
+      }
     ]
   }
 }
@@ -85,6 +113,10 @@ Optional: pass `AFK_TIMING_LOG` to write per-hook timing to a log file:
 ```json
 "command": "AFK_TIMING_LOG=\"$CLAUDE_PROJECT_DIR/tmp/hook-timing.log\" \"$CLAUDE_PROJECT_DIR\"/path/to/skills/afk/scripts/afk-stop-hook.sh"
 ```
+
+#### Why settings.json registration is required
+
+Skill-scoped hooks declared via SKILL.md frontmatter `hooks` field only fire when the skill is active in the conversation. AFK needs `Stop` to fire on **every** session Stop regardless of whether `/afk` was the most-recently-invoked skill, so settings.json registration is necessary. Verified against [code.claude.com/docs/en/hooks § Hooks in Skills and Agents](https://code.claude.com/docs/en/hooks#hooks-in-skills-and-agents).
 
 ### 2. Install the skill (Claude Code plugin)
 

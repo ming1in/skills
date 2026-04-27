@@ -73,9 +73,18 @@ Project teams can also register this marketplace in `.claude/settings.json`:
 }
 ```
 
-AFK needs two Claude Code lifecycle hooks to enforce and clean up AFK state.
-When using the plugin in a project, point hooks at the installed or checked-out
-scripts:
+AFK needs three Claude Code lifecycle hooks to enforce and clean up AFK state: `Stop` (block session exit while active), `SessionEnd` (clean up the per-session state file on clean exit), and `SessionStart` (resume-reminder if the previous session crashed mid-AFK). The fastest path is the bundled installer:
+
+```bash
+bash skills/afk/install.sh                         # add to ~/.claude/settings.json
+bash skills/afk/install.sh --target /project/.claude/settings.json
+bash skills/afk/install.sh --print                 # preview, no write
+bash skills/afk/install.sh --remove                # uninstall (idempotent)
+```
+
+The installer is idempotent (entries are tagged so re-runs dedupe) and `--remove` cleans up only AFK entries, preserving any other hooks in the file.
+
+If you'd rather wire hooks by hand, point them at the installed or checked-out scripts (the `big-one` monorepo dogfoods this exact shape):
 
 ```json
 {
@@ -101,6 +110,17 @@ scripts:
           }
         ]
       }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/submodules/skills/skills/afk/scripts/afk-session-start.sh",
+            "timeout": 5
+          }
+        ]
+      }
     ]
   }
 }
@@ -108,6 +128,8 @@ scripts:
 
 The `big-one` monorepo consumes this repo as a git submodule at
 `submodules/skills` and uses that hook shape while dogfooding AFK.
+
+**Why settings.json hooks (not skill-scoped frontmatter):** skill-scoped hooks declared in SKILL.md `hooks:` only fire when the skill is currently active in the conversation. AFK needs `Stop` to fire on every session Stop regardless of whether `/afk` was the most-recently-invoked skill, so settings.json registration is required. Verified against [code.claude.com/docs/en/hooks § Hooks in Skills and Agents](https://code.claude.com/docs/en/hooks#hooks-in-skills-and-agents).
 
 ### Codex
 
