@@ -113,9 +113,14 @@ jobs:
           echo "── test 3: stop hook blocked while active"
           OUT=$(printf '{"session_id":"%s","hook_event_name":"Stop"}' "$SESSION_ID" \
             | AFK_TIMING_LOG=/dev/null bash "$SCRIPTS/afk-stop-hook.sh")
-          python3 -c "
+          # Pipe OUT through stdin instead of interpolating into Python source —
+          # the hook's `reason` field contains literal single quotes (in
+          # task_status='blocked' and task_status='done') that break the
+          # `json.loads('$OUT')` form. See CI run 24975509003 for the original
+          # SyntaxError.
+          printf '%s' "$OUT" | python3 -c "
           import json, sys
-          d = json.loads('$OUT')
+          d = json.load(sys.stdin)
           assert d.get('decision') == 'block', f'expected decision=block, got: {d}'
           print('  decision=block confirmed')
           "
