@@ -1,0 +1,142 @@
+name: Test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install shellcheck
+        run: sudo apt-get install -y shellcheck
+
+      # ── 1. Shell scripts ────────────────────────────────────────────────────
+      - name: shellcheck — all scripts
+        run: |
+          find skills -name '*.sh' | sort | while read -r f; do
+            echo "  checking $f"
+            shellcheck -S warning "$f"
+          done
+          echo "shellcheck passed"
+
+      # ── 2. JSON manifests ───────────────────────────────────────────────────
+      - name: Validate JSON manifests
+        run: |
+          for f in \
+            .claude-plugin/marketplace.json \
+            .claude-plugin/plugin.json \
+            .codex-plugin/plugin.json; do
+            echo "  validating $f"
+            python3 -c "import json,sys; json.load(open(sys.argv[1]))" "$f"
+          done
+          echo "JSON validation passed"
+
+      # ── 3. install.sh --print idempotency ──────────────────────────────────
+      - name: install.sh --print (no write, idempotency)
+        run: |
+          SETTINGS_TMP="$(mktemp)"
+          echo '{}' > "$SETTINGS_TMP"
+          # First run — should add 3 entries
+          bash skills/afk/install.sh --print --target "$SETTINGS_TMP" | python3 -c "
+          import json, sys
+          settings = json.load(sys.stdin)
+          hooks = settings.get('hooks', {})
+          missing = [e for e in ['Stop', 'SessionEnd', 'SessionStart'] if e not in hooks]
+          if missing:
+              sys.exit(f'ERROR: missing hook events after install: {missing}')
+          print('install.sh --print: all 3 hook events present')
+          "
+          # Second run — should be idempotent (same output)
+          bash skills/afk/install.sh --print --target "$SETTINGS_TMP" | python3 -c "
+          import json, sys
+          settings = json.load(sys.stdin)
+          for event in ['Stop', 'SessionEnd', 'SessionStart']:
+              count = sum(
+                  1 for group in settings.get('hooks', {}).get(event, [])
+                  for h in group.get('hooks', [])
+              )
+              if count != 1:
+                  sys.exit(f'ERROR: {event} has {count} hook entries (expected 1) — install is not idempotent')
+          print('install.sh --print: idempotency confirmed (1 entry per event)')
+          "
+          rm -f "$SETTINGS_TMP"
+
+      # ── 4. AFK pipeline smoke test ──────────────────────────────────────────
+      - name: AFK pipeline smoke test
+        run: |
+          set -euo pipefail
+          SESSION_ID="ci-test-session-001"
+          STATE_DIR="$HOME/.claude/afk-stack"
+          STATE_FILE="$STATE_DIR/$SESSION_ID.json"
+          SCRIPTS="skills/afk/scripts"
+
+          echo "── test 1: stop hook with no state → exit 0, no output"
+          OUT=$(printf '{"session_id":"%s","hook_event_name":"Stop"}' "$SESSION_ID" \
+            | AFK_TIMING_LOG=/dev/null bash "$SCRIPTS/afk-stop-hook.sh")
+          [[ -z "$OUT" ]] || { echo "FAIL: expected no output, got: $OUT"; exit 1; }
+          echo "  PASS"
+
+          echo "── test 2: enable"
+          AFK_SESSION_OVERRIDE="$SESSION_ID" \
+            bash "$SCRIPTS/afk-enable.sh" "$SESSION_ID" "ci smoke test task"
+          [[ -f "$STATE_FILE" ]] || { echo "FAIL: state file not created"; exit 1; }
+          python3 -c "
+          import json, sys
+          s = json.load(open('$STATE_FILE'))
+          assert s['enabled'] == True, 'enabled not True'
+          assert s['task_status'] == 'active', 'task_status not active'
+          assert s['session_id'] == '$SESSION_ID', 'session_id mismatch'
+          print('  state file valid')
+          "
+          echo "  PASS"
+
+          echo "── test 3: stop hook blocked while active"
+          OUT=$(printf '{"session_id":"%s","hook_event_name":"Stop"}' "$SESSION_ID" \
+            | AFK_TIMING_LOG=/dev/null bash "$SCRIPTS/afk-stop-hook.sh")
+          python3 -c "
+          import json, sys
+          d = json.loads('$OUT')
+          assert d.get('decision') == 'block', f'expected decision=block, got: {d}'
+          print('  decision=block confirmed')
+          "
+          echo "  PASS"
+
+          echo "── test 4: disable (sets enabled=false, file preserved)"
+          AFK_SESSION_OVERRIDE="$SESSION_ID" \
+            bash "$SCRIPTS/afk-disable.sh" "$SESSION_ID"
+          python3 -c "
+          import json, sys
+          s = json.load(open('$STATE_FILE'))
+          assert s.get('enabled') == False, f'expected enabled=False after disable, got: {s}'
+          print('  enabled=False confirmed')
+          "
+          echo "  PASS"
+
+          echo "── test 5: stop hook released after disable → exit 0, no output"
+          OUT=$(printf '{"session_id":"%s","hook_event_name":"Stop"}' "$SESSION_ID" \
+            | AFK_TIMING_LOG=/dev/null bash "$SCRIPTS/afk-stop-hook.sh")
+          [[ -z "$OUT" ]] || { echo "FAIL: expected no output after disable, got: $OUT"; exit 1; }
+          echo "  PASS"
+
+          echo "── test 6: re-enable then status"
+          AFK_SESSION_OVERRIDE="$SESSION_ID" \
+            bash "$SCRIPTS/afk-enable.sh" "$SESSION_ID" "status test"
+          OUT=$(AFK_SESSION_OVERRIDE="$SESSION_ID" bash "$SCRIPTS/afk-status.sh" "$SESSION_ID")
+          echo "$OUT" | grep -q "ENABLED\|enabled\|active" \
+            || { echo "FAIL: status did not report enabled state. Got: $OUT"; exit 1; }
+          echo "  PASS"
+
+          echo "── test 7: SessionEnd cleanup"
+          printf '{"session_id":"%s","hook_event_name":"SessionEnd"}' "$SESSION_ID" \
+            | AFK_TIMING_LOG=/dev/null bash "$SCRIPTS/afk-session-end.sh"
+          [[ ! -f "$STATE_FILE" ]] \
+            || { echo "FAIL: state file still present after SessionEnd"; exit 1; }
+          echo "  PASS"
+
+          echo "── all 7 smoke tests passed"
