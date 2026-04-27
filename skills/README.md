@@ -7,9 +7,7 @@ clear trigger metadata and only the runtime resources needed by that skill.
 
 | Skill | Purpose |
 | --- | --- |
-| [`afk`](afk/) | Enable autonomous AFK mode for the current session. |
-| [`afk-off`](afk-off/) | Disable AFK mode for the current session. |
-| [`afk-status`](afk-status/) | Inspect AFK state for this session and the rest of the stack. |
+| [`afk`](afk/) | Manage AFK mode (autonomous-while-away). Verbs: `on` (default) / `off` / `status`. |
 
 ## Planned
 

@@ -135,7 +135,7 @@ reason = (
     "then stop on the next turn.\n"
     "  4. When the work is genuinely complete (the session's in-flight "
     "work AND any registered task), write task_status='done' to "
-    "~/.claude/afk-stack/<session_id>.json (or run /afk-off). The hook will then "
+    "~/.claude/afk-stack/<session_id>.json (or run /afk off). The hook will then "
     "release the session.\n"
     "  5. Plan deliberately. Break decisions into options, weigh "
     "tradeoffs, recommend, execute. Repeat.\n"

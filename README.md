@@ -9,9 +9,7 @@ Reusable agent skills for **Claude Code**, **Codex**, and **OpenCode**. Install 
 
 | Skill | What it does | Audience |
 | --- | --- | --- |
-| [`afk`](skills/afk/) | Continue current session work autonomously while you're away from the keyboard. | Claude Code power users running long sessions |
-| [`afk-off`](skills/afk-off/) | Disable AFK mode for the current session. | Companion to `afk` |
-| [`afk-status`](skills/afk-status/) | Show current AFK state and other active sessions in the stack. | Cross-session debugging |
+| [`afk`](skills/afk/) | Step away from your keyboard and have your agent keep working autonomously. Subcommands: `/afk` (or `/afk on`) enables, `/afk off` disables, `/afk status` inspects. | Claude Code power users running long sessions |
 
 ## Install
 
@@ -38,16 +36,10 @@ See [`skills/afk/README.md`](skills/afk/README.md) for full details.
 
 ```bash
 INSTALLER="$HOME/.codex/skills/.system/skill-installer/scripts/install-skill-from-github.py"
-python3 "$INSTALLER" \
-  --repo ming1in/skills \
-  --path skills/afk skills/afk-off skills/afk-status
-```
-
-To install just one skill, pass a single `--path`:
-
-```bash
 python3 "$INSTALLER" --repo ming1in/skills --path skills/afk
 ```
+
+As of v0.3.0 there's only one skill (`afk`) — earlier versions had three (`afk`, `afk-off`, `afk-status`) and you'd pass them all to one `--path` invocation. The repeatable `--path` mechanism still works for future skills.
 
 Restart Codex after installing. The installer drops files into `$CODEX_HOME/skills/` (default `~/.codex/skills/`). It aborts if a destination already exists — to update, delete the destination directory and re-run.
 
@@ -66,13 +58,11 @@ If you've cloned this repo (or use it as a git submodule like `big-one` does at 
 /plugin install ming-skills@ming-skills
 ```
 
-For Codex, symlink the skill directories into `$CODEX_HOME/skills/`:
+For Codex, symlink the skill directory into `$CODEX_HOME/skills/`:
 
 ```bash
 mkdir -p "${CODEX_HOME:-$HOME/.codex}/skills"
-for s in afk afk-off afk-status; do
-  ln -s "$PWD/skills/$s" "${CODEX_HOME:-$HOME/.codex}/skills/$s"
-done
+ln -s "$PWD/skills/afk" "${CODEX_HOME:-$HOME/.codex}/skills/afk"
 ```
 
 ## Quick start (Claude Code + AFK)
@@ -90,13 +80,13 @@ done
 # (close laptop, get coffee)
 
 # Check what happened:
-/afk-status
+/afk status
 
 # Done?
-/afk-off
+/afk off
 ```
 
-The agent keeps working through Stop events until it self-marks `task_status: "done"` (work complete) or `task_status: "blocked"` (hard approval gate hit), or you run `/afk-off`. A 50-iteration cap prevents runaway loops.
+The agent keeps working through Stop events until it self-marks `task_status: "done"` (work complete) or `task_status: "blocked"` (hard approval gate hit), or you run `/afk off`. A 50-iteration cap prevents runaway loops.
 
 ## Repository shape
 
@@ -107,15 +97,13 @@ The agent keeps working through Stop events until it self-marks `task_status: "d
 ├── .opencode/              # OpenCode install notes (placeholder)
 ├── .github/workflows/      # CI: shellcheck + JSON validation + AFK smoke test
 ├── skills/
-│   ├── afk/                # /afk slash command + supporting scripts + install.sh
-│   ├── afk-off/            # /afk-off slash command
-│   └── afk-status/         # /afk-status slash command
+│   └── afk/                # /afk slash command (verbs: on/off/status) + scripts + install.sh
 ├── CHANGELOG.md
 ├── LICENSE                 # MIT
 └── README.md
 ```
 
-Each skill directory has a `SKILL.md` (the slash-command body) and a `README.md` (human-facing docs). AFK additionally bundles `scripts/` and `install.sh`.
+The `afk` directory has a `SKILL.md` (the slash-command body that dispatches on verb), a `README.md` (human-facing docs), bundled `scripts/`, and `install.sh` for hook registration.
 
 ## Why settings.json hooks (not skill-scoped frontmatter)
 
@@ -139,7 +127,7 @@ CI ([`.github/workflows/test.yml`](.github/workflows/test.yml)) runs on every pu
 
 ## Why these skills
 
-`afk` was the seed — Ming wanted to step away during long sessions without losing autonomous progress, and the existing patterns (ralph-loop, `--dangerously-skip-permissions`) didn't fit. The skill became a reference design for "smarter loops that write themselves" — the agent owns its own continue/done/blocked signal via a state file rather than re-injecting a fixed prompt. Companion skills emerged as the natural UX surface (`afk-off`, `afk-status`).
+`afk` was the seed — Ming wanted to step away during long sessions without losing autonomous progress, and the existing patterns (ralph-loop, `--dangerously-skip-permissions`) didn't fit. The skill became a reference design for "smarter loops that write themselves" — the agent owns its own continue/done/blocked signal via a state file rather than re-injecting a fixed prompt. As of v0.3.0, AFK is one consolidated skill with verb subcommands (`on`/`off`/`status`); earlier versions split these as three separate slash commands.
 
 ## Planned skills
 

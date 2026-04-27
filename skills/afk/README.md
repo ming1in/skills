@@ -8,7 +8,7 @@ Running `/afk` writes a per-session state file at `~/.claude/afk-stack/<session-
 
 Three escape valves prevent runaway loops:
 
-1. **`/afk-off`** — manual disable from any Claude Code session
+1. **`/afk off`** — manual disable from any Claude Code session
 2. **`task_status: "done"` or `"blocked"`** — the agent writes this itself when work is complete or hits a hard blocker
 3. **Iteration cap** — the hook stops blocking after 50 Stop events (configurable in the state file)
 
@@ -17,7 +17,7 @@ Three escape valves prevent runaway loops:
 `--dangerously-skip-permissions` silences all permission prompts globally and permanently for the session. AFK is different:
 
 - AFK keeps approval gates intact — the agent still pauses for merge-to-main, external messages, money movement, and destructive ops. It just handles everything else without asking.
-- AFK is reversible mid-session. `/afk-off` returns the session to normal interactive mode.
+- AFK is reversible mid-session. `/afk off` returns the session to normal interactive mode.
 - AFK is session-scoped and keyed by session ID — enabling it in Session A doesn't affect Session B running concurrently.
 - AFK gives the agent operating principles to reason with, not just a blanket permission removal.
 
@@ -35,10 +35,10 @@ Typical session:
 
 # Step away. Agent keeps working.
 # On return — check what happened:
-/afk-status
+/afk status
 
 # Disable when you're back:
-/afk-off
+/afk off
 ```
 
 Bare `/afk` (no argument) tells the agent to continue the current session's in-flight work. The argument is optional added context, not a replacement for session state.
@@ -49,7 +49,7 @@ Bare `/afk` (no argument) tells the agent to continue the current session's in-f
 
 #### 1. Install the skill
 
-Add this repo as a plugin marketplace, then install the `ming-skills` bundle (which includes `afk`, `afk-off`, and `afk-status`):
+Add this repo as a plugin marketplace, then install the `ming-skills` plugin (which provides the `/afk` slash command with `on`/`off`/`status` subcommands):
 
 ```text
 /plugin marketplace add ming1in/skills
@@ -140,33 +140,31 @@ Skill-scoped hooks declared via `SKILL.md` frontmatter `hooks` field only fire w
 
 ```bash
 INSTALLER="$HOME/.codex/skills/.system/skill-installer/scripts/install-skill-from-github.py"
-python3 "$INSTALLER" \
-  --repo ming1in/skills \
-  --path skills/afk skills/afk-off skills/afk-status
+python3 "$INSTALLER" --repo ming1in/skills --path skills/afk
 ```
 
 Restart Codex after installing.
 
-> **Note:** AFK's autonomous Stop-hook behavior is currently Claude-Code-specific. Installing under Codex makes the skill source available for review and adaptation; a Codex lifecycle adapter is planned. Companion skills (`afk-off`, `afk-status`) install the same way and are listed in the command above.
+> **Note:** AFK's autonomous Stop-hook behavior currently uses Claude-Code-specific env substitutions (`${CLAUDE_SKILL_DIR}`, `${CLAUDE_SESSION_ID}`). Codex has compatible `SessionStart` and `Stop` hooks (the `Stop` hook supports the same `decision: "block"` continuation pattern), so the AFK-on-Codex adapter is a small port — not blocked on missing platform features. Until that adapter ships, installing under Codex makes the skill source available for review.
 
-For local development, install from a checked-out repo by symlinking the skill directories into `$CODEX_HOME/skills`:
+For local development, install from a checked-out repo by symlinking the skill directory into `$CODEX_HOME/skills`:
 
 ```bash
 mkdir -p "${CODEX_HOME:-$HOME/.codex}/skills"
-for s in afk afk-off afk-status; do
-  ln -s "$PWD/skills/$s" "${CODEX_HOME:-$HOME/.codex}/skills/$s"
-done
+ln -s "$PWD/skills/afk" "${CODEX_HOME:-$HOME/.codex}/skills/afk"
 ```
 
-### Companion skills
+### Verb subcommands
 
-`/afk-off` and `/afk-status` ship in the same `ming-skills` plugin and share the AFK state stack:
+`/afk` is one slash command with three verbs (consolidated in v0.3.0 from three separate skills). All verbs share the AFK state stack at `~/.claude/afk-stack/<session-id>.json`:
 
-| Skill | Command | What it does |
-|-------|---------|--------------|
-| `afk` | `/afk [task]` | Enable AFK mode for this session |
-| `afk-off` | `/afk-off` | Disable AFK mode for this session |
-| `afk-status` | `/afk-status` | Show current AFK state + other active sessions |
+| Invocation | What it does |
+|------------|--------------|
+| `/afk` | Enable AFK mode (default verb is `on`) |
+| `/afk "<task>"` | Enable with focus context (first arg is treated as task because it's not a recognized verb) |
+| `/afk on [task]` | Enable explicitly |
+| `/afk off` | Disable for this session |
+| `/afk status` | Show current state + other sessions in the AFK stack |
 
 ## State file format
 
@@ -182,7 +180,7 @@ done
 }
 ```
 
-The agent writes `task_status: "done"` or `task_status: "blocked"` (with a `block_reason` field) to signal the hook to release. `/afk-off` deletes the state file entirely.
+The agent writes `task_status: "done"` or `task_status: "blocked"` (with a `block_reason` field) to signal the hook to release. `/afk off` deletes the state file entirely.
 
 ## Testing
 
@@ -208,9 +206,9 @@ Second run (AFK active): prints JSON `{"decision": "block", "reason": "..."}` �
 
 Check `~/.claude/afk-stack/<your-session-id>.json` exists and shows `"enabled": true, "task_status": "active"`. If the file is missing or `enabled` is `false`, AFK didn't actually engage. Likely causes:
 
-- The skill body's path resolution failed (older `${CLAUDE_SKILL_DIR}` regression). Re-run `/afk-status` — if it errors with a path not found, your install is stale; reinstall via `bash install.sh` or `/plugin install ming-skills@ming-skills`.
+- The skill body's path resolution failed (older `${CLAUDE_SKILL_DIR}` regression). Re-run `/afk status` — if it errors with a path not found, your install is stale; reinstall via `bash install.sh` or `/plugin install ming-skills@ming-skills`.
 - Hooks not registered. Run `bash install.sh --print` and verify the output JSON has `Stop`, `SessionEnd`, and `SessionStart` entries. If they're missing, run `bash install.sh` (without `--print`) to write them.
-- A different session beat you to a Stop event. The state file is keyed by canonical session ID — the hook only fires on Stop events from your session. Run `/afk-status` to confirm your session's entry exists.
+- A different session beat you to a Stop event. The state file is keyed by canonical session ID — the hook only fires on Stop events from your session. Run `/afk status` to confirm your session's entry exists.
 
 ### Install ran but hooks aren't firing
 
@@ -250,7 +248,7 @@ Then `tail -f tmp/hook-timing.log` shows one line per fire: `<ISO-ts>\t<script-n
 The agent is supposed to write `task_status: "done"` to the state file when work completes. If it forgot:
 
 ```bash
-# Replace SESSION_ID with yours from /afk-status output
+# Replace SESSION_ID with yours from /afk status output
 python3 -c "
 import json, os
 p = os.path.expanduser(f'~/.claude/afk-stack/SESSION_ID.json')
@@ -260,7 +258,7 @@ json.dump(s, open(p, 'w'), indent=2)
 "
 ```
 
-Or simpler: run `/afk-off` (flips `enabled` to `false`; same release effect).
+Or simpler: run `/afk off` (flips `enabled` to `false`; same release effect).
 
 ### Iteration cap kept hitting before work completed
 
@@ -272,7 +270,7 @@ The default cap is 50 Stop events per AFK invocation. If your work routinely exc
 
 ### Cross-session bleed (Session B's Stop blocks even though /afk was in Session A)
 
-This was a real bug pre-v0.2.0 (the state file was user-scope single-file). If you see this on v0.2.0+: run `/afk-status` and inspect "Other sessions in AFK stack" — confirm the entry is keyed by the *correct* session ID. If multiple entries exist for the same session ID (shouldn't happen), report it as a bug with the contents of `ls ~/.claude/afk-stack/`.
+This was a real bug pre-v0.2.0 (the state file was user-scope single-file). If you see this on v0.2.0+: run `/afk status` and inspect "Other sessions in AFK stack" — confirm the entry is keyed by the *correct* session ID. If multiple entries exist for the same session ID (shouldn't happen), report it as a bug with the contents of `ls ~/.claude/afk-stack/`.
 
 ### Removing AFK from a project / user setup
 

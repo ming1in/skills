@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# afk-disable.sh — disable AFK for THIS session only; called by /afk-off
+# afk-disable.sh — disable AFK for THIS session only; called by /afk off
 #
 # Operates on ~/.claude/afk-stack/<session_id>.json. Other sessions'
 # AFK state is untouched. session_id is passed in via the

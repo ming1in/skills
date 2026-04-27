@@ -1,5 +1,29 @@
 # Changelog
 
+## 0.3.0 — 2026-04-27
+
+### Changed (BREAKING)
+
+- **Consolidated three top-level skills (`afk`, `afk-off`, `afk-status`) into one `/afk` skill with verb subcommands.** New surface:
+  - `/afk` → enable AFK mode (default verb `on`, matches prior bare `/afk` behavior)
+  - `/afk "<task>"` → enable with focus context (matches prior `/afk "<task>"` behavior)
+  - `/afk on [task]` → enable explicitly
+  - `/afk off` → disable (replaces `/afk-off`)
+  - `/afk status` → inspect (replaces `/afk-status`)
+
+  **Why:** three top-level slash commands sharing one state file was poor CLI design. The mental model is "AFK is one feature with three actions," not "three independent things." Consolidation also resolves the à la carte install question — one skill = one plugin install, no per-skill plugin restructure needed.
+
+  **Migration:** users of `/afk-off` switch to `/afk off`; users of `/afk-status` switch to `/afk status`. Bare `/afk` and `/afk "<task>"` continue to work unchanged. Underlying state file (`~/.claude/afk-stack/<session-id>.json`) and lifecycle hooks are unchanged.
+
+### Added
+
+- **`scripts/afk-dispatch.sh`** — verb dispatcher that parses `$ARGUMENTS`, routes to the appropriate worker script (`afk-enable.sh`, `afk-disable.sh`, `afk-status.sh`), defaults to `on` when no recognized verb is the first token. Worker scripts unchanged from 0.2.0 — just called through the dispatcher now.
+
+### Removed
+
+- `skills/afk-off/` directory (its functionality is now `/afk off`)
+- `skills/afk-status/` directory (its functionality is now `/afk status`)
+
 ## 0.2.0 — 2026-04-27
 
 ### Added
