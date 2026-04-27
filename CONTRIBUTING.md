@@ -15,7 +15,7 @@ Reusable agent skills for Claude Code, Codex, and OpenCode. This repo is small, 
 │   │   ├── SKILL.md        # required — the slash-command body
 │   │   ├── README.md       # required — human-facing docs
 │   │   ├── scripts/        # optional — implementation scripts
-│   │   └── install.sh      # optional — for skills that need lifecycle hooks
+│   │                       # lifecycle hooks declared in plugin.json `hooks`
 │   └── ...
 ├── CHANGELOG.md
 ├── LICENSE                 # MIT

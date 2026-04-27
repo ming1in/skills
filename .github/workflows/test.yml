@@ -51,35 +51,26 @@ jobs:
           fi
           echo "plugin version uniformity confirmed"
 
-      # ── 3. install.sh --print idempotency ──────────────────────────────────
-      - name: install.sh --print (no write, idempotency)
+      # ── 3. plugin.json hooks declaration check ─────────────────────────────
+      - name: plugin.json declares the three AFK lifecycle hooks
         run: |
-          SETTINGS_TMP="$(mktemp)"
-          echo '{}' > "$SETTINGS_TMP"
-          # First run — should add 3 entries
-          bash skills/afk/install.sh --print --target "$SETTINGS_TMP" | python3 -c "
-          import json, sys
-          settings = json.load(sys.stdin)
-          hooks = settings.get('hooks', {})
+          python3 -c "
+          import json
+          d = json.load(open('.claude-plugin/plugin.json'))
+          hooks = d.get('hooks', {})
           missing = [e for e in ['Stop', 'SessionEnd', 'SessionStart'] if e not in hooks]
           if missing:
-              sys.exit(f'ERROR: missing hook events after install: {missing}')
-          print('install.sh --print: all 3 hook events present')
-          "
-          # Second run — should be idempotent (same output)
-          bash skills/afk/install.sh --print --target "$SETTINGS_TMP" | python3 -c "
-          import json, sys
-          settings = json.load(sys.stdin)
+              raise SystemExit(f'ERROR: plugin.json hooks missing events: {missing}')
           for event in ['Stop', 'SessionEnd', 'SessionStart']:
-              count = sum(
-                  1 for group in settings.get('hooks', {}).get(event, [])
-                  for h in group.get('hooks', [])
-              )
-              if count != 1:
-                  sys.exit(f'ERROR: {event} has {count} hook entries (expected 1) — install is not idempotent')
-          print('install.sh --print: idempotency confirmed (1 entry per event)')
+              groups = hooks[event]
+              total = sum(len(g.get('hooks', [])) for g in groups)
+              if total != 1:
+                  raise SystemExit(f'ERROR: {event} has {total} hook entries (expected 1)')
+              cmd = groups[0]['hooks'][0].get('command', '')
+              if '\${CLAUDE_PLUGIN_ROOT}' not in cmd or 'afk-' not in cmd:
+                  raise SystemExit(f'ERROR: {event} command does not look right: {cmd!r}')
+          print('plugin.json: all 3 AFK lifecycle hooks declared, using \${CLAUDE_PLUGIN_ROOT}')
           "
-          rm -f "$SETTINGS_TMP"
 
       # ── 4. AFK pipeline smoke test ──────────────────────────────────────────
       - name: AFK pipeline smoke test

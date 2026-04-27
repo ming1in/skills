@@ -22,15 +22,9 @@ Add this repo as a plugin marketplace, then install the bundle:
 /plugin install ming-skills@ming-skills
 ```
 
-Some skills (like `afk`) need lifecycle hooks registered in your `.claude/settings.json`. Each skill's README documents the additional setup. AFK ships a bundled installer:
+As of v0.4.0, lifecycle hooks ship inside the plugin (declared in `.claude-plugin/plugin.json` `hooks` field) and activate automatically when the plugin is enabled. **No separate install step is required** — the `/plugin install` above is the entire setup.
 
-```bash
-bash skills/afk/install.sh                       # add to ~/.claude/settings.json
-bash skills/afk/install.sh --print               # preview, no write
-bash skills/afk/install.sh --remove              # uninstall, idempotent
-```
-
-See [`skills/afk/README.md`](skills/afk/README.md) for full details.
+> **Migrating from v0.3.x?** Earlier versions required `bash skills/afk/install.sh` to register hooks in your `~/.claude/settings.json`. Those entries are now redundant (and will fire alongside the bundled hooks, doubling every event). Clean them up before upgrading: any line in `~/.claude/settings.json` `hooks` containing `# afk-skill` should be removed. One-liner: `python3 -c "import json,os; p=os.path.expanduser('~/.claude/settings.json'); s=json.load(open(p)); s['hooks']={e:[g for g in groups if not any('afk-skill' in h.get('command','') for h in g.get('hooks',[]))] for e,groups in s.get('hooks',{}).items()}; s['hooks']={k:v for k,v in s['hooks'].items() if v}; json.dump(s,open(p,'w'),indent=2)"`
 
 ### Codex
 
@@ -97,13 +91,13 @@ The agent keeps working through Stop events until it self-marks `task_status: "d
 ├── .opencode/              # OpenCode install notes (placeholder)
 ├── .github/workflows/      # CI: shellcheck + JSON validation + AFK smoke test
 ├── skills/
-│   └── afk/                # /afk slash command (verbs: on/off/status) + scripts + install.sh
+│   └── afk/                # /afk slash command (verbs: on/off/status) + scripts
 ├── CHANGELOG.md
 ├── LICENSE                 # MIT
 └── README.md
 ```
 
-The `afk` directory has a `SKILL.md` (the slash-command body that dispatches on verb), a `README.md` (human-facing docs), bundled `scripts/`, and `install.sh` for hook registration.
+The `afk` directory has a `SKILL.md` (the slash-command body that dispatches on verb), a `README.md` (human-facing docs), and bundled `scripts/`. Lifecycle hooks (Stop, SessionEnd, SessionStart) are declared in `.claude-plugin/plugin.json` and activate automatically with the plugin.
 
 ## Why settings.json hooks (not skill-scoped frontmatter)
 

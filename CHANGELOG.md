@@ -1,5 +1,42 @@
 # Changelog
 
+## 0.4.0 — 2026-04-27
+
+### Changed (BREAKING)
+
+- **Lifecycle hooks now ship inside the plugin** (`.claude-plugin/plugin.json` `hooks` field). `Stop`, `SessionEnd`, and `SessionStart` activate automatically when the plugin is enabled — no separate install step. Empirically verified 2026-04-27: plugin-bundled hooks fire on every Stop event after install, exactly matching plugin lifecycle.
+- **`install.sh` removed.** No longer needed; the `/plugin install ming-skills@ming-skills` slash command IS the entire setup. Single-step install.
+
+### Removed
+
+- `skills/afk/install.sh` (the user-scope settings.json registration tool — superseded by plugin-bundled hooks)
+- `skills/afk/scripts/afk-bundled-hook-test.sh` (v0.3.2 test infra — its job is done)
+
+### Migration from v0.3.x
+
+If you previously ran `bash install.sh`, you have AFK hook entries in your `~/.claude/settings.json` that will fire alongside the bundled hooks (doubling every event). Clean them up before upgrading:
+
+```bash
+python3 -c "
+import json, os
+p = os.path.expanduser('~/.claude/settings.json')
+s = json.load(open(p))
+s['hooks'] = {e: [g for g in groups if not any('afk-skill' in h.get('command','') for h in g.get('hooks', []))] for e, groups in s.get('hooks', {}).items()}
+s['hooks'] = {k: v for k, v in s['hooks'].items() if v}
+json.dump(s, open(p, 'w'), indent=2)
+"
+```
+
+(This removes any line in settings.json hooks that contains the `# afk-skill` tag the old `install.sh` wrote.)
+
+### CI
+
+- Replaced the `install.sh --print` idempotency test with a `plugin.json hooks declaration check` that verifies all three lifecycle hooks are declared and use `${CLAUDE_PLUGIN_ROOT}`.
+
+### Doctrine corrections
+
+The "Why settings.json registration is required" rationale shipped in earlier versions (and in big-one's `operations-pod/claude-code/engineering.md`) was based on an unverified assumption that plugin-bundled hooks have skill-scoped lifetime. The 2026-04-27 empirical test (v0.3.2) proved the opposite — they have plugin-scoped lifetime, which IS always-on once the plugin is enabled. Big-one knowledge-graph corrections shipped alongside this release.
+
 ## 0.3.2 — 2026-04-27 (test release)
 
 ### Added (test infrastructure — temporary)

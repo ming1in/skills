@@ -33,4 +33,4 @@ For AFK changes specifically, run the local pipeline before pushing:
 - [ ] CHANGELOG updated under `## [Unreleased]` (or under a new release section if cutting a version)
 - [ ] Plugin version bumped in **all three** manifests if this is a new release (`marketplace.json` + `.claude-plugin/plugin.json` + `.codex-plugin/plugin.json`) — CI's version-uniformity check will fail otherwise
 - [ ] If adding a new skill: README "Included Skills" table updated, per-skill `README.md` and `SKILL.md` present
-- [ ] If changing AFK hooks: re-tested both `install.sh` and manual settings.json paths
+- [ ] If changing AFK lifecycle hooks: verified the `hooks` field in `.claude-plugin/plugin.json` declares all three (`Stop`, `SessionEnd`, `SessionStart`) using `${CLAUDE_PLUGIN_ROOT}` and that the AFK pipeline smoke test still passes
