@@ -123,6 +123,20 @@ CI ([`.github/workflows/test.yml`](.github/workflows/test.yml)) runs on every pu
 
 `afk` was the seed — Ming wanted to step away during long sessions without losing autonomous progress, and the existing patterns (ralph-loop, `--dangerously-skip-permissions`) didn't fit. The skill became a reference design for "smarter loops that write themselves" — the agent owns its own continue/done/blocked signal via a state file rather than re-injecting a fixed prompt. As of v0.3.0, AFK is one consolidated skill with verb subcommands (`on`/`off`/`status`); earlier versions split these as three separate slash commands.
 
+## Tools we use alongside this
+
+Third-party skills and plugins we've installed, dogfooded, and recommend.
+
+### Claude Code
+
+- **[`mvanhorn/last30days-skill`](https://github.com/mvanhorn/last30days-skill)** — `/last30days <topic>` runs parallel research across Reddit, X, YouTube, HN, Polymarket, TikTok, Instagram. Scored by engagement and real-money odds, not editorial authority.
+- **[`addyosmani/agent-skills`](https://github.com/addyosmani/agent-skills)** — 20 engineering skills + slash commands (`/spec`, `/plan`, `/build`, `/test`, `/review`, `/ship`) that encode quality gates so agents don't skip steps.
+
+### Cursor
+
+- **[`cursor/plugins/continual-learning`](https://github.com/cursor/plugins/tree/main/continual-learning)** — Incremental transcript-driven memory updates. Inspired our own continual-learning loop.
+- **[`cursor/plugins/agent-compatibility`](https://github.com/cursor/plugins/tree/main/agent-compatibility)** — Pairs an npm CLI with focused review agents to score how well a repo holds up under agent workflows.
+
 ## Planned skills
 
 - `people-search` — privacy-preserving people lookup and friend-entry draft workflow.
