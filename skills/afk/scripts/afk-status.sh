@@ -15,10 +15,13 @@ if [[ -z "$SESSION_ID" ]]; then
     exit 1
 fi
 
-python3 - "$SESSION_ID" <<'PY'
-import json, os, sys, glob
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+python3 - "$SESSION_ID" "$SCRIPT_DIR" <<'PY'
+import json, os, sys, glob, subprocess
 
 session_id = sys.argv[1]
+script_dir = sys.argv[2]
 stack_dir = os.path.expanduser("~/.claude/afk-stack")
 my_path = os.path.join(stack_dir, f"{session_id}.json")
 
@@ -33,6 +36,20 @@ if os.path.exists(my_path):
     print(f"  Status:      {state.get('task_status', 'active')}", flush=True)
     if state.get("block_reason"):
         print(f"  Blocked:     {state['block_reason']}", flush=True)
+
+    # Compute and display write-density if event log exists
+    density_script = os.path.join(script_dir, "afk-write-density.py")
+    try:
+        result = subprocess.run(
+            [sys.executable, density_script, session_id],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        density_data = json.loads(result.stdout)
+        print(f"  Write-density: {density_data['write_density']:.3f} ({density_data['state_writes']} writes / {density_data['iterations']} iterations)", flush=True)
+    except Exception:
+        pass  # fail silent — if no event log or error, skip density line
 else:
     print(f"AFK mode (this session, {session_id[:8]}…): OFF", flush=True)
 

@@ -59,7 +59,7 @@ if [[ ! -f "$STATE_FILE" ]]; then
 fi
 
 python3 - "$STATE_FILE" <<'PY'
-import json, os, sys, time
+import json, os, sys, time, subprocess
 
 state_path = sys.argv[1]
 try:
@@ -93,6 +93,19 @@ tmp = state_path + ".tmp"
 with open(tmp, "w") as f:
     json.dump(state, f, indent=2)
 os.replace(tmp, state_path)
+
+# Log iteration_block event to JSONL audit log
+import subprocess
+script_dir = os.path.dirname(os.path.abspath(__file__))
+log_script = os.path.join(script_dir, "afk-log-event.py")
+try:
+    subprocess.run(
+        [sys.executable, log_script, state_path, "iteration_block"],
+        check=False,
+        capture_output=True,
+    )
+except Exception:
+    pass  # fail open — don't block hook on logging errors
 
 task = (state.get("task") or "").strip()
 started = state.get("started_at", "?")
@@ -129,23 +142,35 @@ reason = (
     "  3. STILL pause for the hard approval gates (merging app code to "
     "main, sending external messages, money movement, destructive "
     "shared-state ops, security-sensitive changes). If one of those is "
-    "the only path forward, write task_status='blocked' to "
-    "~/.claude/afk-stack/<session_id>.json with a one-line note in "
-    "`block_reason`, "
+    "the only path forward, mark blocked via: "
+    "`bash submodules/skills/skills/afk/scripts/afk-state-write.sh "
+    f"{session_id} task_status blocked && "
+    f"bash submodules/skills/skills/afk/scripts/afk-state-write.sh "
+    f"{session_id} block_reason 'reason here'`, "
     "then stop on the next turn.\n"
     "  4. When the work is genuinely complete (the session's in-flight "
-    "work AND any registered task), write task_status='done' to "
-    "~/.claude/afk-stack/<session_id>.json (or run /afk off). The hook will then "
+    "work AND any registered task), mark done via: "
+    "`bash submodules/skills/skills/afk/scripts/afk-state-write.sh "
+    f"{session_id} task_status done` (or run /afk off). The hook will then "
     "release the session.\n"
-    "  5. Plan deliberately. Break decisions into options, weigh "
-    "tradeoffs, recommend, execute. Repeat.\n"
+    "  5. Plan deliberately AND log plan transitions. Break decisions into "
+    "options, weigh tradeoffs, recommend, execute. When your approach "
+    "changes (pivoting from one subtask to another, discovering a better "
+    "path, hitting a blocker that requires replanning), log it via: "
+    "`bash submodules/skills/skills/afk/scripts/afk-state-write.sh "
+    f"{session_id} current_subtask 'new subtask'` or "
+    "`bash submodules/skills/skills/afk/scripts/afk-state-write.sh "
+    f"{session_id} last_decision 'decision context'`. "
+    "The state file is your working memory — write to it.\n"
     "  6. Browser-use AFK discipline. If any part of this task involves "
     "browser automation: (a) write current findings to a KG file before "
     "each Stop event — ephemeral browser state that doesn't land in "
     "knowledge/ is wasted AFK iteration; (b) Write before Browse in "
     "each iteration, not after; (c) if the task direction pivots, "
-    "update block_reason in ~/.claude/afk-stack/<session_id>.json with a one-liner "
-    "pivot note so the scope trail is auditable on return.\n\n"
+    "log the pivot via: "
+    "`bash submodules/skills/skills/afk/scripts/afk-state-write.sh "
+    f"{session_id} block_reason 'pivot: <one-liner>'` "
+    "so the scope trail is auditable on return.\n\n"
     "Otherwise: continue. Plan the next concrete step and execute it."
 )
 

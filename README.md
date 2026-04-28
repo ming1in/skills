@@ -123,9 +123,9 @@ CI ([`.github/workflows/test.yml`](.github/workflows/test.yml)) runs on every pu
 
 `afk` was the seed — Ming wanted to step away during long sessions without losing autonomous progress, and the existing patterns (ralph-loop, `--dangerously-skip-permissions`) didn't fit. The skill became a reference design for "smarter loops that write themselves" — the agent owns its own continue/done/blocked signal via a state file rather than re-injecting a fixed prompt. As of v0.3.0, AFK is one consolidated skill with verb subcommands (`on`/`off`/`status`); earlier versions split these as three separate slash commands.
 
-## Tools we use alongside this
+## My Agent Skill Stack
 
-Third-party skills and plugins we've installed, dogfooded, and recommend.
+Third-party skills and plugins I've installed, dogfooded, and recommend.
 
 ### Claude Code
 
