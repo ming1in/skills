@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.0 — 2026-05-06
+
+### Added
+
+- **`feynman-explain` skill** — breaks down any concept, system, code, or decision using the Feynman-technical hybrid formula: plain-language mechanism → evidence/numbers → actionable implication. Operationalizes the cross-project communication standard from the KG (`knowledge/CONTRIBUTING.md § Feynman Principle`).
+
 ## 0.4.0 — 2026-04-27
 
 ### Changed (BREAKING)
