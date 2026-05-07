@@ -1,5 +1,5 @@
 {
-  "name": "ming",
+  "name": "from-ming",
   "description": "Ming's reusable agent skills and workflows.",
   "owner": {
     "name": "Ming Lin"
@@ -8,7 +8,7 @@
     {
       "name": "skills",
       "description": "Reusable agent skills for Claude Code, Codex, OpenCode, and related coding agents.",
-      "version": "0.5.0",
+      "version": "0.5.1",
       "source": "./",
       "author": {
         "name": "Ming Lin"

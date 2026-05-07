@@ -1,7 +1,7 @@
 {
   "name": "skills",
   "description": "Reusable agent skills and workflows by Ming Lin.",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "author": {
     "name": "Ming Lin"
   },

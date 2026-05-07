@@ -62,6 +62,7 @@ python3 - "$STATE_FILE" <<'PY'
 import json, os, sys, time, subprocess
 
 state_path = sys.argv[1]
+session_id = os.path.splitext(os.path.basename(state_path))[0]
 try:
     with open(state_path) as f:
         state = json.load(f)
